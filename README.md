@@ -1,4 +1,11 @@
-# Substance Integration Tools
+# Substance Tools
+
+<img width="604" alt="image" src="https://user-images.githubusercontent.com/60579014/146648193-546c5636-80fd-4759-986d-c3d95cfe465b.png">
+
+## This addon allows you to:
+
+- Export your model to Substance Painter with a single click!
+- Import your Substance Painter texture sets back into Blender with a single click!
 
 ## Installation
 
