@@ -149,7 +149,7 @@ class SubstanceToolsPreferences(bpy.types.AddonPreferences):
   bl_idname = __name__
 
   painter_path: bpy.props.StringProperty(name='Substance Painter Executable Path', default=painter_default_path, subtype='FILE_PATH')
-  texture_output_folder_name: bpy.props.StringProperty(name='Textures Folder Name', default='substance_painter_textures')
+  texture_output_folder_name: bpy.props.StringProperty(name='Textures Folder Name', default='textures')
   # Material names cant have underscores
   texture_set_name_regex: bpy.props.StringProperty(name='Texture Set Name Regex', default='(.+?)_')
 
