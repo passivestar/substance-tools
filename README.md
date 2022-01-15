@@ -44,5 +44,5 @@ You can use this operator to either load textures that were not loaded yet, or r
 In the addon preferences you can configure:
 
 - Substance Painter Path. Default is `C:\Program Files\Allegorithmic\Adobe Substance 3D Painter\Adobe Substance 3D Painter.exe`
-- Texture output folder name. Default is `substance_painter_textures`
+- Texture output folder name. Default is `textures`
 - Texture Set Name Regex - Regular expression used to determine the texture set name by the texture file name. Usually the texture set name goes first and is separated from other info by the first "_". Default value is `(.+?)_`
