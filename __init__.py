@@ -4,9 +4,9 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 0, 0),
+  'version': (1, 1, 0),
   'author': 'passivestar',
-  'blender': (3, 0, 0),
+  'blender': (3, 3, 0),
   'location': '3D View N Panel',
   'description': 'Simplifies Export to Substance Painter',
   'category': 'Import-Export'
@@ -16,37 +16,30 @@ bl_info = {
 
 def get_paths():
   directory = bpy.path.abspath('//')
-  file = bpy.path.basename(bpy.data.filepath).split('.')[0]
+  file = bpy.context.view_layer.active_layer_collection.name
   return ( directory, file )
 
 # @Operators
 
 class OpenInSubstancePainterOperator(bpy.types.Operator):
-  """Open in Substance Painter"""
-  bl_idname, bl_label = 'st.open_in_substance_painter', 'Export FBX to Substance Painter'
+  """Open Collection in Substance Painter"""
+  bl_idname, bl_label = 'st.open_in_substance_painter', 'Open Collection in Substance Painter'
 
   def execute(self, context):
     preferences = context.preferences.addons[__name__].preferences
     if preferences.painter_path == '':
-      self.report({'ERROR'}, 'Please specify Substance Painter exe path in addon preferences')
+      self.report({'ERROR'}, 'Please specify Substance Painter path in addon preferences')
       return {'FINISHED'}
     if bpy.data.filepath == '':
-      self.report({'ERROR'}, f'File is not saved. Please save your blend file')
+      self.report({'ERROR'}, 'File is not saved. Please save your blend file')
       return {'FINISHED'}
     directory, file = get_paths()
-    bpy.ops.export_scene.fbx(
-        mesh_smooth_type='EDGE',
-        use_mesh_modifiers=False,
-        add_leaf_bones=False,
-        bake_anim_use_nla_strips=False,
-        filepath=directory + file + '.fbx'
-      )
     textures_output_path = Path(directory).joinpath(preferences.texture_output_folder_name)
     if not textures_output_path.exists():
       textures_output_path.mkdir(parents=True, exist_ok=True)
-      fbx_path = directory + file + '.fbx'
-      spp_path = directory + file + '.spp'
-      subprocess.Popen([preferences.painter_path, '--mesh', fbx_path, '--export-path', str(textures_output_path), spp_path])
+    fbx_path = directory + file + '.fbx'
+    spp_path = directory + file + '.spp'
+    subprocess.Popen(f'{preferences.painter_path} --mesh {fbx_path} --export-path {str(textures_output_path)} {spp_path}', shell=True)
     return {'FINISHED'}
 
 class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
@@ -68,7 +61,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
 
     # Return if the file is not save
     if bpy.data.filepath == '':
-      self.report({'ERROR'}, f'File is not saved')
+      self.report({'ERROR'}, 'File is not saved')
       context.area.type = previous_context
       return {'FINISHED'}
 
@@ -97,7 +90,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
         context.view_layer.objects.active = obj
         break
     if context.active_object.type != 'MESH':
-      self.report({'ERROR'}, f'There are no meshes in the scene')
+      self.report({'ERROR'}, 'There are no meshes in the scene')
       context.area.type = previous_context
       return {'FINISHED'}
 
@@ -129,6 +122,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
 
 class SubstanceToolsPanel(bpy.types.Panel):
   """Substance Tools Panel"""
+  bl_idname = 'SCENE_PT_substance_tools'
   bl_label = 'Substance Painter Tools'
   bl_space_type = 'VIEW_3D'
   bl_region_type = 'UI'
@@ -137,18 +131,16 @@ class SubstanceToolsPanel(bpy.types.Panel):
   def draw(self, context):
     layout = self.layout
     row = layout.row()
-    row.operator('st.open_in_substance_painter', text='Export to Painter')
+    row.operator('st.open_in_substance_painter', text='Open Collection in Painter')
     row = layout.row()
     row.operator('st.load_substance_painter_textures', text='Load Painter Textures')
 
 # @Preferences
 
-painter_default_path = 'C:\Program Files\Allegorithmic\Adobe Substance 3D Painter\Adobe Substance 3D Painter.exe'
-
 class SubstanceToolsPreferences(bpy.types.AddonPreferences):
   bl_idname = __name__
 
-  painter_path: bpy.props.StringProperty(name='Substance Painter Executable Path', default=painter_default_path, subtype='FILE_PATH')
+  painter_path: bpy.props.StringProperty(name='Substance Painter Executable Path', default='', subtype='FILE_PATH')
   texture_output_folder_name: bpy.props.StringProperty(name='Textures Folder Name', default='textures')
   # Material names cant have underscores
   texture_set_name_regex: bpy.props.StringProperty(name='Texture Set Name Regex', default='(.+?)_')
