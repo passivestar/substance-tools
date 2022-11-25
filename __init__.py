@@ -86,7 +86,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
     # Set any mesh object as an active one so that we could use it while we're loading textures
     # for different materials (because you need to use Shader Editor and can't assign directly)
     for obj in bpy.data.objects:
-      if obj.type == 'MESH':
+      if obj.type == 'MESH' and len(obj.data.materials) > 0:
         context.view_layer.objects.active = obj
         break
     if context.active_object.type != 'MESH':
