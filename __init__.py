@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 1, 1),
+  'version': (1, 1, 2),
   'author': 'passivestar',
   'blender': (3, 3, 0),
   'location': '3D View N Panel',
@@ -42,6 +42,9 @@ class OpenInSubstancePainterOperator(bpy.types.Operator):
     if not textures_output_path.exists():
       textures_output_path.mkdir(parents=True, exist_ok=True)
     fbx_path = directory + file + '.fbx'
+    if not Path(fbx_path).exists():
+      self.report({'ERROR'}, 'File is not exported. Export collections to fbx first')
+      return {'FINISHED'}
     spp_path = directory + file + '.spp'
     subprocess.Popen(f'{preferences.painter_path} --mesh {fbx_path} --export-path {str(textures_output_path)} {spp_path}', shell=True)
     return {'FINISHED'}
@@ -84,8 +87,10 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
     # Iterate through all of the files and group them by texture set name (material)
     texture_sets = defaultdict(list)
     for texture_file in textures_output_path.iterdir():
-      texture_set_name = re.search(preferences.texture_set_name_regex, texture_file.name).group(1)
-      texture_sets[texture_set_name].append(texture_file.name)
+      regex_search_result = re.search(preferences.texture_set_name_regex, texture_file.name)
+      if regex_search_result:
+        texture_set_name = regex_search_result.group(1)
+        texture_sets[texture_set_name].append(texture_file.name)
 
     # Set any mesh object as an active one so that we could use it while we're loading textures
     # for different materials (because you need to use Shader Editor and can't assign directly)
