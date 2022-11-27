@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 1, 0),
+  'version': (1, 1, 1),
   'author': 'passivestar',
   'blender': (3, 3, 0),
   'location': '3D View N Panel',
@@ -34,6 +34,10 @@ class OpenInSubstancePainterOperator(bpy.types.Operator):
       self.report({'ERROR'}, 'File is not saved. Please save your blend file')
       return {'FINISHED'}
     directory, file = get_paths()
+    for o in bpy.context.view_layer.active_layer_collection.collection.objects:
+      if len(o.data.materials) == 0 or o.data.materials[0] is None:
+        self.report({'ERROR'}, f'Object {o.name} has no material assigned')
+        return {'FINISHED'}
     textures_output_path = Path(directory).joinpath(preferences.texture_output_folder_name)
     if not textures_output_path.exists():
       textures_output_path.mkdir(parents=True, exist_ok=True)
@@ -130,8 +134,9 @@ class SubstanceToolsPanel(bpy.types.Panel):
 
   def draw(self, context):
     layout = self.layout
+    directory, file = get_paths()
     row = layout.row()
-    row.operator('st.open_in_substance_painter', text='Open Collection in Painter')
+    row.operator('st.open_in_substance_painter', text=f'Open "{file}" in Painter')
     row = layout.row()
     row.operator('st.load_substance_painter_textures', text='Load Painter Textures')
 
