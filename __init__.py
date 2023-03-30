@@ -4,9 +4,9 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 1, 2),
+  'version': (1, 2, 0),
   'author': 'passivestar',
-  'blender': (3, 3, 0),
+  'blender': (3, 5, 0),
   'location': '3D View N Panel',
   'description': 'Simplifies Export to Substance Painter',
   'category': 'Import-Export'
@@ -54,6 +54,11 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
   bl_idname, bl_label, bl_options = 'st.load_substance_painter_textures', 'Load Substance Painter Textures', {'REGISTER', 'UNDO'}
 
   def execute(self, context):
+    # Check that node wrangler is enabled
+    if 'node_wrangler' not in bpy.context.preferences.addons:
+      self.report({'ERROR'}, 'Node Wrangler is not enabled')
+      return {'FINISHED'}
+
     previous_context = context.area.type
     context.area.type = 'NODE_EDITOR'
     context.area.ui_type = 'ShaderNodeTree'
