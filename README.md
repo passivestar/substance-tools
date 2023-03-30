@@ -29,3 +29,4 @@ In the addon preferences you can configure:
 - Substance Painter Path
 - Texture output folder name. Default is `textures`
 - Texture Set Name Regex - Regular expression used to determine the texture set name by the texture file name. Usually the texture set name goes first and is separated from other info by the first "_". Default value is `(.+?)_`
+- Auto Export FBX - Automatically export collections when opening the active collection in Substance
