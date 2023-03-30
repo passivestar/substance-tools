@@ -46,7 +46,11 @@ class OpenInSubstancePainterOperator(bpy.types.Operator):
       self.report({'ERROR'}, 'File is not exported. Export collections to fbx first')
       return {'FINISHED'}
     spp_path = directory + file + '.spp'
-    subprocess.Popen(f'{preferences.painter_path} --mesh {fbx_path} --export-path {str(textures_output_path)} {spp_path}', shell=True)
+
+    if os.name == 'nt':
+      subprocess.Popen([preferences.painter_path, '--mesh', fbx_path, '--export-path', str(textures_output_path), spp_path])
+    else:
+      subprocess.Popen(f'{preferences.painter_path} --mesh {fbx_path} --export-path {str(textures_output_path)} {spp_path}', shell=True)
     return {'FINISHED'}
 
 class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
