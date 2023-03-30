@@ -17,6 +17,10 @@ bl_info = {
 def get_paths():
   directory = bpy.path.abspath('//')
   file = bpy.context.view_layer.active_layer_collection.name
+
+  # Make sure that the file name is valid
+  file = re.sub(r'[^a-zA-Z0-9_]', '_', file)
+
   return ( directory, file )
 
 # @Operators
@@ -43,8 +47,23 @@ class OpenInSubstancePainterOperator(bpy.types.Operator):
       textures_output_path.mkdir(parents=True, exist_ok=True)
     fbx_path = directory + file + '.fbx'
     if not Path(fbx_path).exists():
-      self.report({'ERROR'}, 'File is not exported. Export collections to fbx first')
-      return {'FINISHED'}
+      if preferences.auto_export_fbx:
+        bpy.ops.wm.save_mainfile()
+        bpy.ops.export_scene.fbx(
+          mesh_smooth_type='EDGE',
+          use_mesh_modifiers=True,
+          add_leaf_bones=False,
+          apply_scale_options='FBX_SCALE_ALL',
+          use_batch_own_dir=False,
+          bake_anim_use_nla_strips=False,
+          bake_space_transform=True,
+          batch_mode="COLLECTION",
+          filepath=directory
+        )
+      else:
+        self.report({'ERROR'}, 'File is not exported. Export collections to fbx first')
+        return {'FINISHED'}
+
     spp_path = directory + file + '.spp'
 
     if os.name == 'nt':
@@ -163,12 +182,14 @@ class SubstanceToolsPreferences(bpy.types.AddonPreferences):
   texture_output_folder_name: bpy.props.StringProperty(name='Textures Folder Name', default='textures')
   # Material names cant have underscores
   texture_set_name_regex: bpy.props.StringProperty(name='Texture Set Name Regex', default='(.+?)_')
+  auto_export_fbx: bpy.props.BoolProperty(name='Auto Export FBX', default=False)
 
   def draw(self, context):
     layout = self.layout
     layout.prop(self, 'painter_path')
     layout.prop(self, 'texture_output_folder_name')
     layout.prop(self, 'texture_set_name_regex')
+    layout.prop(self, 'auto_export_fbx')
 
 # @Register
 
