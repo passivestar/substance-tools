@@ -14,10 +14,10 @@ In 3D view press N. You'll be able to find new buttons in the menu on the right.
 # Usage
 
 - Specify the path to Substance Painter in the addon preferences
-- Place objects you want to texture into their own separate collection and give them a material. You can link objects to collection instead of moving if you hold ctrl when you drag them in the outliner
+- Place objects you want to texture into their own separate collection and give them a material. You can link objects to collection instead of moving if you hold ctrl when you drag them in the outliner. This way you can have one texture set for multiple objects, useful for small props!
 - Export your file to FBX with batching by collection enabled
 - Select the collection you want to texture in the outliner
-- Press `Open Collection in Painter`
+- Press `Open [Collection Name] in Painter`
 - In Substance Painter, first press `Ctrl+S` to save the `.spp` file
 - Make sure exported textures start with the texture set name, like this: `$textureSet_diff(_$colorSpace)(.$udim)`
 - When you're done, export textures in substance, and press `Load Painter Textures` in Blender. Make sure you have `Node Wrangler` addon enabled.
