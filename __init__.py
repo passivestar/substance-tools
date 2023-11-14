@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 0),
+  'version': (1, 3, 1),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
