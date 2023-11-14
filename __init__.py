@@ -98,14 +98,9 @@ class OpenInSubstancePainterOperator(bpy.types.Operator):
 
     try:
       if os.name == 'nt':
-        process = subprocess.Popen([painter_path, '--mesh', fbx_path, '--export-path', str(textures_output_path), spp_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.Popen([painter_path, '--mesh', fbx_path, '--export-path', str(textures_output_path), spp_path])
       else:
-        process = subprocess.Popen(f'{painter_path} --mesh {fbx_path} --export-path {str(textures_output_path)} {spp_path}', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-      stdout, stderr = process.communicate()
-
-      if stderr:
-        print(stderr)
+        subprocess.Popen(f'{painter_path} --mesh {fbx_path} --export-path {str(textures_output_path)} {spp_path}', shell=True)
 
     except Exception as e:
       self.report({'ERROR'}, f'Error opening Substance Painter: {e}')
