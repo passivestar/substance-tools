@@ -91,13 +91,13 @@ class OpenInSubstancePainterOperator(bpy.types.Operator):
     spp_path = directory + file + '.spp'
 
     # Escape all of the unescaped spaces in the painter path
-    preferences.painter_path = re.sub(r'(?<!\\) ', r'\ ', preferences.painter_path)
+    painter_path = re.sub(r'(?<!\\) ', r'\ ', preferences.painter_path)
 
     try:
       if os.name == 'nt':
-        process = subprocess.Popen([preferences.painter_path, '--mesh', fbx_path, '--export-path', str(textures_output_path), spp_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen([painter_path, '--mesh', fbx_path, '--export-path', str(textures_output_path), spp_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       else:
-        process = subprocess.Popen(f'{preferences.painter_path} --mesh {fbx_path} --export-path {str(textures_output_path)} {spp_path}', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(f'{painter_path} --mesh {fbx_path} --export-path {str(textures_output_path)} {spp_path}', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
       stdout, stderr = process.communicate()
 
