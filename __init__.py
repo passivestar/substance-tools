@@ -4,9 +4,9 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 2, 0),
+  'version': (1, 3, 0),
   'author': 'passivestar',
-  'blender': (3, 5, 0),
+  'blender': (4, 0, 0),
   'location': '3D View N Panel',
   'description': 'Simplifies Export to Substance Painter',
   'category': 'Import-Export'
@@ -31,21 +31,36 @@ class OpenInSubstancePainterOperator(bpy.types.Operator):
 
   def execute(self, context):
     preferences = context.preferences.addons[__name__].preferences
+
     if preferences.painter_path == '':
       self.report({'ERROR'}, 'Please specify Substance Painter path in addon preferences')
       return {'FINISHED'}
+
     if bpy.data.filepath == '':
       self.report({'ERROR'}, 'File is not saved. Please save your blend file')
       return {'FINISHED'}
+
     directory, file = get_paths()
+
     for o in bpy.context.view_layer.active_layer_collection.collection.objects:
+      # Check if the object is mesh:
+      if o.type != 'MESH':
+        self.report({'ERROR'}, f'Object {o.name} is not a mesh')
+        return {'FINISHED'}
+
+      # Check if the object has a material:
       if len(o.data.materials) == 0 or o.data.materials[0] is None:
         self.report({'ERROR'}, f'Object {o.name} has no material assigned')
         return {'FINISHED'}
+
     textures_output_path = Path(directory).joinpath(preferences.texture_output_folder_name)
+
     if not textures_output_path.exists():
       textures_output_path.mkdir(parents=True, exist_ok=True)
+
     fbx_path = directory + file + '.fbx'
+
+    # Check if fbx_path exists
     if not Path(fbx_path).exists():
       if preferences.auto_export_fbx:
         bpy.ops.wm.save_mainfile()
@@ -61,15 +76,38 @@ class OpenInSubstancePainterOperator(bpy.types.Operator):
           filepath=directory
         )
       else:
-        self.report({'ERROR'}, 'File is not exported. Export collections to fbx first')
+        self.report({'ERROR'}, 'Substance Painter needs an FBX to import and an FBX file was not exported. Export collections to FBX first, or enable auto-export in the addon preferences')
         return {'FINISHED'}
+
+    # Check if a mac .app and add the executable part automatically
+    if os.name == 'posix' and preferences.painter_path.endswith('.app'):
+      preferences.painter_path = preferences.painter_path + '/Contents/MacOS/Adobe Substance 3D Painter'
+    
+    # Check if preferences.painter_path exists
+    if not Path(preferences.painter_path).exists():
+      self.report({'ERROR'}, 'Substance Painter path is not valid. Please set the corrent path to Substance Painter in addon preferences')
+      return {'FINISHED'}
 
     spp_path = directory + file + '.spp'
 
-    if os.name == 'nt':
-      subprocess.Popen([preferences.painter_path, '--mesh', fbx_path, '--export-path', str(textures_output_path), spp_path])
-    else:
-      subprocess.Popen(f'{preferences.painter_path} --mesh {fbx_path} --export-path {str(textures_output_path)} {spp_path}', shell=True)
+    # Escape all of the unescaped spaces in the painter path
+    preferences.painter_path = re.sub(r'(?<!\\) ', r'\ ', preferences.painter_path)
+
+    try:
+      if os.name == 'nt':
+        process = subprocess.Popen([preferences.painter_path, '--mesh', fbx_path, '--export-path', str(textures_output_path), spp_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      else:
+        process = subprocess.Popen(f'{preferences.painter_path} --mesh {fbx_path} --export-path {str(textures_output_path)} {spp_path}', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+      stdout, stderr = process.communicate()
+
+      if stderr:
+        print(stderr)
+
+    except Exception as e:
+      self.report({'ERROR'}, f'Error opening Substance Painter: {e}')
+      return {'FINISHED'}
+
     return {'FINISHED'}
 
 class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
@@ -79,7 +117,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
   def execute(self, context):
     # Check that node wrangler is enabled
     if 'node_wrangler' not in bpy.context.preferences.addons:
-      self.report({'ERROR'}, 'Node Wrangler is not enabled')
+      self.report({'ERROR'}, 'Node Wrangler needs to be enabled! Please enable it in Edit -> Preferences -> Add-ons')
       return {'FINISHED'}
 
     previous_context = context.area.type
@@ -88,6 +126,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
     preferences = context.preferences.addons[__name__].preferences
     directory, file = get_paths()
     textures_output_path = Path(directory).joinpath(preferences.texture_output_folder_name)
+
     # All of the materials in the blend file
     material_names = [material.name for material in bpy.data.materials]
 
@@ -168,8 +207,14 @@ class SubstanceToolsPanel(bpy.types.Panel):
   def draw(self, context):
     layout = self.layout
     directory, file = get_paths()
+
     row = layout.row()
-    row.operator('st.open_in_substance_painter', text=f'Open "{file}" in Painter')
+    # Only display this button if file is not "Scene_Collection":
+    if file != 'Scene_Collection':
+      row.operator('st.open_in_substance_painter', text=f'Open "{file}" in Painter')
+    else:
+      row.label(text='Select a collection in the outliner')
+
     row = layout.row()
     row.operator('st.load_substance_painter_textures', text='Load Painter Textures')
 
