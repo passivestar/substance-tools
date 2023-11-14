@@ -90,8 +90,11 @@ class OpenInSubstancePainterOperator(bpy.types.Operator):
 
     spp_path = directory + file + '.spp'
 
-    # Escape all of the unescaped spaces in the painter path
-    painter_path = re.sub(r'(?<!\\) ', r'\ ', preferences.painter_path)
+    # Escape the painter path on posix
+    if os.name == 'posix':
+      painter_path = re.sub(r'(?<!\\) ', r'\ ', preferences.painter_path)
+    else:
+      painter_path = preferences.painter_path
 
     try:
       if os.name == 'nt':
