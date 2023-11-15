@@ -177,9 +177,9 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
 
     try:
       if os.name == 'nt':
-        subprocess.Popen([painter_path, '--mesh', fbx, '--export-path', str(textures), spp])
+        subprocess.Popen([painter_path, '--mesh', fbx, '--export-path', textures, spp])
       else:
-        subprocess.Popen(f'{painter_path} --mesh {fbx} --export-path {str(textures)} {spp}', shell=True)
+        subprocess.Popen(f'{painter_path} --mesh {fbx} --export-path {textures} {spp}', shell=True)
 
     except Exception as e:
       self.report({'ERROR'}, f'Error opening Substance Painter: {e}')
