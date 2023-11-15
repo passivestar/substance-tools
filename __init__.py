@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 9),
+  'version': (1, 3, 10),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -50,11 +50,17 @@ def detect_substance_painter_path():
   # If none of the paths exist, return an empty string
   return ''
 
+def material_needs_setup(material):
+  if material.node_tree is None:
+    return False
+  if len(material.node_tree.nodes) == 2:
+    return True
+  return False
+
 # Mock data for testing through blender text editor without installing
 mocks = {
   'painter_path': detect_substance_painter_path(),
-  'texture_output_folder_name': 'textures',
-  'texture_set_name_regex': '(.+?)_'
+  'texture_output_folder_name': 'textures'
 }
 
 def get_paths(context):
@@ -82,8 +88,7 @@ def get_preferences(context):
     prefs = context.preferences.addons[__name__].preferences
     return {
       'painter_path': prefs.painter_path,
-      'texture_output_folder_name': prefs.texture_output_folder_name,
-      'texture_set_name_regex': prefs.texture_set_name_regex
+      'texture_output_folder_name': prefs.texture_output_folder_name
     }
 
 def object_has_material(obj):
@@ -94,7 +99,8 @@ def create_material_for_object(obj):
   material.use_nodes = True
   material.node_tree.nodes.clear()
   principled_bsdf = material.node_tree.nodes.new('ShaderNodeBsdfPrincipled')
-  material.node_tree.links.new(principled_bsdf.outputs['BSDF'], material.node_tree.nodes['Material Output'].inputs['Surface'])
+  material_output = material.node_tree.nodes.new('ShaderNodeOutputMaterial')
+  material.node_tree.links.new(principled_bsdf.outputs['BSDF'], material_output.inputs['Surface'])
   if len(obj.data.materials) > 0:
     obj.data.materials[0] = material
   else:
@@ -199,8 +205,16 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
     # All of the materials in the blend file
     material_names = [material.name for material in bpy.data.materials]
 
-    # Reload old textures first
-    for item in bpy.data.images: item.reload()
+    # Reload all of the unique images in materials of the current collection
+    unique_images = set()
+    for obj in bpy.context.view_layer.active_layer_collection.collection.objects:
+      if obj.type == 'MESH' and len(obj.data.materials) > 0:
+        for material in obj.data.materials:
+          for node in material.node_tree.nodes:
+            if node.bl_idname == 'ShaderNodeTexImage':
+              unique_images.add(node.image)
+    for image in unique_images:
+      image.reload()
 
     # Return if the file is not save
     if bpy.data.filepath == '':
@@ -231,11 +245,12 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
 
     # Iterate through all of the files and group them by texture set name (material)
     texture_sets = defaultdict(list)
+    material_names = sorted([material.name for material in bpy.data.materials if material_needs_setup(material)], key=len, reverse=True)
     for texture_file in textures.iterdir():
-      regex_search_result = re.search(preferences["texture_set_name_regex"], texture_file.name)
-      if regex_search_result:
-        texture_set_name = regex_search_result.group(1)
-        texture_sets[texture_set_name].append(texture_file.name)
+      for material_name in material_names:
+        if material_name in texture_file.name:
+          texture_sets[material_name].append(texture_file.name)
+          break
 
     # Set area type to node editor
     previous_context = context.area.type
@@ -254,14 +269,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
           # Set node editor to current material
           material = bpy.data.materials[texture_set_name]
           context.object.data.materials[0] = material
-          if material.node_tree is None:
-            self.report({'INFO'}, f'Material {material.name} has no node tree, skipping')
-            continue
           context.space_data.node_tree = material.node_tree
-          # Don't add textures if there're more than 2 nodes in the tree (if textures were already added)
-          if len(context.space_data.node_tree.nodes) > 2:
-            self.report({'INFO'}, f'Material {material.name} has more than 2 nodes, skipping')
-            continue
           # Select the Principled BSDF node
           for node in context.space_data.node_tree.nodes:
             if node.bl_idname == 'ShaderNodeBsdfPrincipled':
@@ -330,14 +338,11 @@ class SubstanceToolsPreferences(bpy.types.AddonPreferences):
 
   painter_path: bpy.props.StringProperty(name='Substance Painter Executable Path', default=detect_substance_painter_path(), subtype='FILE_PATH')
   texture_output_folder_name: bpy.props.StringProperty(name='Textures Folder Name', default='textures')
-  # Material names cant have underscores
-  texture_set_name_regex: bpy.props.StringProperty(name='Texture Set Name Regex', default='(.+?)_')
 
   def draw(self, context):
     layout = self.layout
     layout.prop(self, 'painter_path')
     layout.prop(self, 'texture_output_folder_name')
-    layout.prop(self, 'texture_set_name_regex')
 
 # @Register
 
