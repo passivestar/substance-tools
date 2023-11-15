@@ -1,10 +1,10 @@
-import bpy, glob, re, subprocess, os
+import bpy, glob, re, subprocess, os, traceback
 from collections import defaultdict
 from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 6),
+  'version': (1, 3, 7),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -13,15 +13,6 @@ bl_info = {
 }
 
 # @Util
-
-def get_paths():
-  directory = bpy.path.abspath('//')
-  file = bpy.context.view_layer.active_layer_collection.name
-
-  # Make sure that the file name is valid
-  file = re.sub(r'[^a-zA-Z0-9_]', '_', file)
-
-  return ( directory, file )
 
 def detect_substance_painter_path():
   paths = []
@@ -59,6 +50,42 @@ def detect_substance_painter_path():
   # If none of the paths exist, return an empty string
   return ''
 
+# Mock data for testing through blender text editor without installing
+mocks = {
+  'painter_path': detect_substance_painter_path(),
+  'texture_output_folder_name': 'textures',
+  'texture_set_name_regex': '(.+?)_'
+}
+
+def get_paths(context):
+  directory = bpy.path.abspath('//')
+
+  collection_name_clean = re.sub(r'[^a-zA-Z0-9_]', '_', bpy.context.view_layer.active_layer_collection.name)
+
+  fbx_path = directory + collection_name_clean + '.fbx'
+  spp_path = directory + collection_name_clean + '.spp'
+
+  textures = Path(directory).joinpath(get_preferences(context)["texture_output_folder_name"])
+
+  return {
+    'directory': directory,
+    'fbx': fbx_path,
+    'spp': spp_path,
+    'textures': textures,
+    'collection_name_clean': collection_name_clean
+  }
+
+def get_preferences(context):
+  if __name__ == '__main__':
+    return mocks
+  else:
+    prefs = context.preferences.addons[__name__].preferences
+    return {
+      'painter_path': prefs.painter_path,
+      'texture_output_folder_name': prefs.texture_output_folder_name,
+      'texture_set_name_regex': prefs.texture_set_name_regex
+    }
+
 # @Operators
 
 class ExportToSubstancePainterOperator(bpy.types.Operator):
@@ -68,13 +95,18 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
   run_painter: bpy.props.BoolProperty(name='Run Substance Painter', default=True)
 
   def execute(self, context):
-    preferences = context.preferences.addons[__name__].preferences
+    preferences = get_preferences(context)
+    painter_path = preferences["painter_path"]
+
+    paths = get_paths(context)
+    directory = paths['directory']
+    fbx = paths['fbx']
+    spp = paths['spp']
+    textures = paths['textures']
 
     if bpy.data.filepath == '':
       self.report({'ERROR'}, 'File is not saved. Please save your blend file')
       return {'FINISHED'}
-
-    directory, file = get_paths()
 
     for o in bpy.context.view_layer.active_layer_collection.collection.objects:
       # Check if the object is mesh:
@@ -87,12 +119,8 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
         self.report({'ERROR'}, f'Object {o.name} has no material assigned')
         return {'FINISHED'}
 
-    textures_output_path = Path(directory).joinpath(preferences.texture_output_folder_name)
-
-    if not textures_output_path.exists():
-      textures_output_path.mkdir(parents=True, exist_ok=True)
-
-    fbx_path = directory + file + '.fbx'
+    if not textures.exists():
+      textures.mkdir(parents=True, exist_ok=True)
 
     # Export FBX
     bpy.ops.wm.save_mainfile()
@@ -112,26 +140,21 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
     if not self.run_painter:
       return {'FINISHED'}
 
-    if preferences.painter_path == '':
+    if painter_path == '':
       self.report({'ERROR'}, 'Please specify Substance Painter path in addon preferences')
       return {'FINISHED'}
 
-    # Check if a mac .app and add the executable part automatically
-    if os.name == 'posix' and preferences.painter_path.endswith('.app'):
-      preferences.painter_path = preferences.painter_path + '/Contents/MacOS/Adobe Substance 3D Painter'
-    
     # Check if preferences.painter_path exists
-    if not Path(preferences.painter_path).exists():
+    if not Path(painter_path).exists():
       self.report({'ERROR'}, 'Substance Painter path is not valid. Please set the corrent path to Substance Painter in addon preferences')
       return {'FINISHED'}
 
-    spp_path = directory + file + '.spp'
-
     # Escape the painter path on posix
     if os.name == 'posix':
-      painter_path = re.sub(r'(?<!\\) ', r'\ ', preferences.painter_path)
-    else:
-      painter_path = preferences.painter_path
+      painter_path = re.sub(r'(?<!\\) ', r'\ ', painter_path)
+      # Check if a mac .app and add the executable part automatically
+      if painter_path.endswith('.app'):
+        painter_path = painter_path + '/Contents/MacOS/Adobe Substance 3D Painter'
 
     # Parse the environment variable
     # env_override = preferences.env.split(';')
@@ -142,9 +165,9 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
 
     try:
       if os.name == 'nt':
-        subprocess.Popen([painter_path, '--mesh', fbx_path, '--export-path', str(textures_output_path), spp_path])
+        subprocess.Popen([painter_path, '--mesh', fbx, '--export-path', str(textures), spp])
       else:
-        subprocess.Popen(f'{painter_path} --mesh {fbx_path} --export-path {str(textures_output_path)} {spp_path}', shell=True)
+        subprocess.Popen(f'{painter_path} --mesh {fbx} --export-path {str(textures)} {spp}', shell=True)
 
     except Exception as e:
       self.report({'ERROR'}, f'Error opening Substance Painter: {e}')
@@ -157,17 +180,15 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
   bl_idname, bl_label, bl_options = 'st.load_substance_painter_textures', 'Load Substance Painter Textures', {'REGISTER', 'UNDO'}
 
   def execute(self, context):
+    preferences = get_preferences(context)
+
+    paths = get_paths(context)
+    textures = paths['textures']
+
     # Check that node wrangler is enabled
     if 'node_wrangler' not in bpy.context.preferences.addons:
       self.report({'ERROR'}, 'Node Wrangler needs to be enabled! Please enable it in Edit -> Preferences -> Add-ons')
       return {'FINISHED'}
-
-    previous_context = context.area.type
-    context.area.type = 'NODE_EDITOR'
-    context.area.ui_type = 'ShaderNodeTree'
-    preferences = context.preferences.addons[__name__].preferences
-    directory, file = get_paths()
-    textures_output_path = Path(directory).joinpath(preferences.texture_output_folder_name)
 
     # All of the materials in the blend file
     material_names = [material.name for material in bpy.data.materials]
@@ -178,46 +199,49 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
     # Return if the file is not save
     if bpy.data.filepath == '':
       self.report({'ERROR'}, 'File is not saved')
-      context.area.type = previous_context
       return {'FINISHED'}
 
     # Return if the texture folder doesn't exist
-    if not textures_output_path.exists():
+    if not textures.exists():
       self.report({'ERROR'}, 'There is no texture folder')
-      context.area.type = previous_context
       return {'FINISHED'}
 
     # Return if there are no materials in the scene
     if len(bpy.data.materials) == 0:
       self.report({'ERROR'}, 'There are no materials in the scene')
+      return {'FINISHED'}
+
+    # Set any mesh object as an active one so that we could use it while we're loading textures
+    # for different materials (because you need to use Shader Editor and can't assign directly)
+    for obj in bpy.data.objects:
+      if obj.type == 'MESH' and len(obj.data.materials) > 0:
+        context.view_layer.objects.active = obj
+        break
+    # Return if there are no meshes in the scene
+    if context.active_object is None or context.active_object.type != 'MESH':
+      self.report({'ERROR'}, 'There are no meshes in the scene')
       context.area.type = previous_context
       return {'FINISHED'}
 
+    # Iterate through all of the files and group them by texture set name (material)
+    texture_sets = defaultdict(list)
+    for texture_file in textures.iterdir():
+      regex_search_result = re.search(preferences["texture_set_name_regex"], texture_file.name)
+      if regex_search_result:
+        texture_set_name = regex_search_result.group(1)
+        texture_sets[texture_set_name].append(texture_file.name)
+
+    # Set area type to node editor
+    previous_context = context.area.type
+    context.area.type = 'NODE_EDITOR'
+    context.area.ui_type = 'ShaderNodeTree'
+
+    # Material to switch back to when we're done adding textures
+    prev_material = context.object.data.materials[0]
+
     # Try catch to make sure that the context is ALWAYS returned to the previous one
     # Otherwise the UI may break
-
     try:
-      # Iterate through all of the files and group them by texture set name (material)
-      texture_sets = defaultdict(list)
-      for texture_file in textures_output_path.iterdir():
-        regex_search_result = re.search(preferences.texture_set_name_regex, texture_file.name)
-        if regex_search_result:
-          texture_set_name = regex_search_result.group(1)
-          texture_sets[texture_set_name].append(texture_file.name)
-
-      # Set any mesh object as an active one so that we could use it while we're loading textures
-      # for different materials (because you need to use Shader Editor and can't assign directly)
-      for obj in bpy.data.objects:
-        if obj.type == 'MESH' and len(obj.data.materials) > 0:
-          context.view_layer.objects.active = obj
-          break
-      if context.active_object.type != 'MESH':
-        self.report({'ERROR'}, 'There are no meshes in the scene')
-        context.area.type = previous_context
-        return {'FINISHED'}
-
-      # Material to switch back to when we're done adding textures
-      prev_material = context.object.data.materials[0]
       # For all of the texture sets that have a material with matching name add nodes via node wrangler
       for texture_set_name, texture_file_names in texture_sets.items():
         if texture_set_name in material_names:
@@ -234,12 +258,15 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
             if node.bl_idname == 'ShaderNodeBsdfPrincipled':
               context.space_data.node_tree.nodes.active = node
               break
-          # Adding textures to node tree
-          bpy.ops.node.nw_add_textures_for_principled(directory=f'{textures_output_path}{os.sep}', files=[{'name':n} for n in texture_file_names])
-      context.object.data.materials[0] = prev_material
+          # Add textures to node tree using node wrangler
+          directory = str(textures) + os.sep
+          files = [{'name':n} for n in texture_file_names]
+          bpy.ops.node.nw_add_textures_for_principled(directory=directory, files=files)
     except Exception as e:
-      self.report({'ERROR'}, f'Error occurred while adding textures: {e}')
+      tb = traceback.format_exc()
+      self.report({'ERROR'}, f'Error occurred while adding textures: {e}\n{tb}')
     finally:
+      context.object.data.materials[0] = prev_material
       context.area.type = previous_context
 
     return {'FINISHED'}
@@ -256,17 +283,19 @@ class SubstanceToolsPanel(bpy.types.Panel):
 
   def draw(self, context):
     layout = self.layout
-    directory, file = get_paths()
-    fbx_path = directory + file + '.fbx'
 
-    fbx_exists = Path(fbx_path).exists()
+    paths = get_paths(context)
+    fbx = paths['fbx']
+    collection_name_clean = paths['collection_name_clean']
+
+    fbx_exists = Path(fbx).exists()
 
     box_column = layout.box().column(align=True)
 
-    if file == 'Scene_Collection':
+    if collection_name_clean == 'Scene_Collection':
       box_column.label(text='Select a collection in the outliner')
     else:
-      box_column.label(text=f'Collection: {file}')
+      box_column.label(text=f'Collection: {collection_name_clean}')
       if fbx_exists:
         box_column.separator()
         column = box_column.column(align=True)
