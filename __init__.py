@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 3),
+  'version': (1, 3, 4),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -253,14 +253,17 @@ class SubstanceToolsPanel(bpy.types.Panel):
       row.label(text='Select a collection in the outliner')
     else:
       if fbx_exists:
-        row = layout.row()
-        row.label(text='Press Ctrl+Shift+R in Painter after re-export to reload the model')
+        layout.row().label(text='Press Ctrl+Shift+R in Painter to reload after re-export')
       text = f'Re-Export "{file}"' if fbx_exists else f'Export "{file}" to Painter'
       row = layout.row()
       row.operator('st.open_in_substance_painter', text=text)
 
     row = layout.row()
-    row.operator('st.load_substance_painter_textures', text='Load Painter Textures')
+    if 'node_wrangler' in bpy.context.preferences.addons:
+      row.operator('st.load_substance_painter_textures', text='Load Painter Textures')
+    else:
+      layout.row().label(text='Node Wrangler needs to be enabled!')
+      layout.row().label(text='Please enable it in Edit -> Preferences -> Add-ons')
 
 # @Preferences
 
