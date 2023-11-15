@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 5),
+  'version': (1, 3, 6),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -61,16 +61,14 @@ def detect_substance_painter_path():
 
 # @Operators
 
-class OpenInSubstancePainterOperator(bpy.types.Operator):
-  """Open Collection in Substance Painter"""
+class ExportToSubstancePainterOperator(bpy.types.Operator):
+  """Export Collection to Substance Painter"""
   bl_idname, bl_label = 'st.open_in_substance_painter', 'Open Collection in Substance Painter'
+
+  run_painter: bpy.props.BoolProperty(name='Run Substance Painter', default=True)
 
   def execute(self, context):
     preferences = context.preferences.addons[__name__].preferences
-
-    if preferences.painter_path == '':
-      self.report({'ERROR'}, 'Please specify Substance Painter path in addon preferences')
-      return {'FINISHED'}
 
     if bpy.data.filepath == '':
       self.report({'ERROR'}, 'File is not saved. Please save your blend file')
@@ -109,6 +107,14 @@ class OpenInSubstancePainterOperator(bpy.types.Operator):
       batch_mode="COLLECTION",
       filepath=directory
     )
+
+    # If we only need to export the fbx, we're done
+    if not self.run_painter:
+      return {'FINISHED'}
+
+    if preferences.painter_path == '':
+      self.report({'ERROR'}, 'Please specify Substance Painter path in addon preferences')
+      return {'FINISHED'}
 
     # Check if a mac .app and add the executable part automatically
     if os.name == 'posix' and preferences.painter_path.endswith('.app'):
@@ -253,25 +259,31 @@ class SubstanceToolsPanel(bpy.types.Panel):
     directory, file = get_paths()
     fbx_path = directory + file + '.fbx'
 
-    row = layout.row()
-
     fbx_exists = Path(fbx_path).exists()
 
+    box_column = layout.box().column(align=True)
+
     if file == 'Scene_Collection':
-      row.label(text='Select a collection in the outliner')
+      box_column.label(text='Select a collection in the outliner')
     else:
+      box_column.label(text=f'Collection: {file}')
       if fbx_exists:
+        box_column.separator()
+        column = box_column.column(align=True)
+        column.operator('st.open_in_substance_painter', text=f'Export', icon='EXPORT').run_painter = False
+        column.operator('st.open_in_substance_painter', text=f'Export and Open in Painter', icon='WINDOW').run_painter = True
         layout.row().label(text='Press Ctrl+Shift+R in Painter to reload after re-export')
-      text = f'Re-Export "{file}"' if fbx_exists else f'Export "{file}" to Painter'
-      row = layout.row()
-      row.operator('st.open_in_substance_painter', text=text)
+      else:
+        box_column.operator('st.open_in_substance_painter', text=f'Export and Open in Painter', icon='WINDOW').run_painter = True
 
     row = layout.row()
     if 'node_wrangler' in bpy.context.preferences.addons:
-      row.operator('st.load_substance_painter_textures', text='Load Painter Textures')
+      row.operator('st.load_substance_painter_textures', text='Load Painter Textures', icon='IMPORT')
     else:
-      layout.row().label(text='Node Wrangler needs to be enabled!')
-      layout.row().label(text='Please enable it in Edit -> Preferences -> Add-ons')
+      box = layout.box()
+      column = box.column(align=True)
+      column.label(text='Node Wrangler addon needs to be enabled!')
+      column.label(text='Please enable it in Edit -> Preferences -> Add-ons')
 
 # @Preferences
 
@@ -294,7 +306,7 @@ class SubstanceToolsPreferences(bpy.types.AddonPreferences):
 # @Register
 
 classes = (
-  OpenInSubstancePainterOperator,
+  ExportToSubstancePainterOperator,
   LoadSubstancePainterTexturesOperator,
 
   SubstanceToolsPanel,
