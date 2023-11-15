@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 8),
+  'version': (1, 3, 9),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -169,13 +169,6 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
       if painter_path.endswith('.app'):
         painter_path = painter_path + '/Contents/MacOS/Adobe Substance 3D Painter'
 
-    # Parse the environment variable
-    # env_override = preferences.env.split(';')
-    # env_override = [e.split('=') for e in env_override]
-    # env_override = {e[0]: e[1] if len(e) > 1 else '' for e in env_override}
-    # env = os.environ.copy()
-    # env.update(env_override)
-
     try:
       if os.name == 'nt':
         subprocess.Popen([painter_path, '--mesh', fbx, '--export-path', str(textures), spp])
@@ -339,14 +332,12 @@ class SubstanceToolsPreferences(bpy.types.AddonPreferences):
   texture_output_folder_name: bpy.props.StringProperty(name='Textures Folder Name', default='textures')
   # Material names cant have underscores
   texture_set_name_regex: bpy.props.StringProperty(name='Texture Set Name Regex', default='(.+?)_')
-  # env: bpy.props.StringProperty(name='Environment', default='')
 
   def draw(self, context):
     layout = self.layout
     layout.prop(self, 'painter_path')
     layout.prop(self, 'texture_output_folder_name')
     layout.prop(self, 'texture_set_name_regex')
-    # layout.prop(self, 'env')
 
 # @Register
 
