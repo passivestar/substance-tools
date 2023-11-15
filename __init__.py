@@ -33,12 +33,12 @@ def detect_substance_painter_path():
     for letter in 'CDEFGHIJKLMNOPQRSTUVWXYZ':
       paths.extend([
           f'{letter}:\\Program Files\\Adobe\\Adobe Substance 3D Painter\\Adobe Substance 3D Painter.exe',  # Windows
-          f'{letter}:\\Program Files (x86)\\Steam\\steamapps\\common\\Substance 3D Painter\\Adobe Substance 3D Painter.exe'  # Windows Steam
+          f'{letter}:\\Program Files (x86)\\Steam\\steamapps\\common\\Substance Painter\\Adobe Substance 3D Painter.exe'  # Windows Steam
       ])
       for year in range(2020, 2026):
         paths.extend([
             f'{letter}:\\Program Files\\Adobe\\Adobe Substance 3D Painter {year}\\Adobe Substance 3D Painter.exe',  # Windows
-            f'{letter}:\\Program Files (x86)\\Steam\\steamapps\\common\\Substance 3D Painter {year}\\Adobe Substance 3D Painter.exe'  # Windows Steam
+            f'{letter}:\\Program Files (x86)\\Steam\\steamapps\\common\\Substance Painter {year}\\Adobe Substance 3D Painter.exe'  # Windows Steam
         ])
 
   # Check each path for the current operating system and return the first one that exists
