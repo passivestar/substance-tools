@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 2),
+  'version': (1, 3, 3),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -96,24 +96,19 @@ class OpenInSubstancePainterOperator(bpy.types.Operator):
 
     fbx_path = directory + file + '.fbx'
 
-    # Check if fbx_path exists
-    if not Path(fbx_path).exists():
-      if preferences.auto_export_fbx:
-        bpy.ops.wm.save_mainfile()
-        bpy.ops.export_scene.fbx(
-          mesh_smooth_type='EDGE',
-          use_mesh_modifiers=True,
-          add_leaf_bones=False,
-          apply_scale_options='FBX_SCALE_ALL',
-          use_batch_own_dir=False,
-          bake_anim_use_nla_strips=False,
-          bake_space_transform=True,
-          batch_mode="COLLECTION",
-          filepath=directory
-        )
-      else:
-        self.report({'ERROR'}, 'Substance Painter needs an FBX to import and an FBX file was not exported. Export collections to FBX first, or enable auto-export in the addon preferences')
-        return {'FINISHED'}
+    # Export FBX
+    bpy.ops.wm.save_mainfile()
+    bpy.ops.export_scene.fbx(
+      mesh_smooth_type='EDGE',
+      use_mesh_modifiers=True,
+      add_leaf_bones=False,
+      apply_scale_options='FBX_SCALE_ALL',
+      use_batch_own_dir=False,
+      bake_anim_use_nla_strips=False,
+      bake_space_transform=True,
+      batch_mode="COLLECTION",
+      filepath=directory
+    )
 
     # Check if a mac .app and add the executable part automatically
     if os.name == 'posix' and preferences.painter_path.endswith('.app'):
@@ -248,13 +243,21 @@ class SubstanceToolsPanel(bpy.types.Panel):
   def draw(self, context):
     layout = self.layout
     directory, file = get_paths()
+    fbx_path = directory + file + '.fbx'
 
     row = layout.row()
-    # Only display this button if file is not "Scene_Collection":
-    if file != 'Scene_Collection':
-      row.operator('st.open_in_substance_painter', text=f'Open "{file}" in Painter')
-    else:
+
+    fbx_exists = Path(fbx_path).exists()
+
+    if file == 'Scene_Collection':
       row.label(text='Select a collection in the outliner')
+    else:
+      if fbx_exists:
+        row = layout.row()
+        row.label(text='Press Ctrl+Shift+R in Painter after re-export to reload the model')
+      text = f'Re-Export "{file}"' if fbx_exists else f'Export "{file}" to Painter'
+      row = layout.row()
+      row.operator('st.open_in_substance_painter', text=text)
 
     row = layout.row()
     row.operator('st.load_substance_painter_textures', text='Load Painter Textures')
@@ -268,7 +271,6 @@ class SubstanceToolsPreferences(bpy.types.AddonPreferences):
   texture_output_folder_name: bpy.props.StringProperty(name='Textures Folder Name', default='textures')
   # Material names cant have underscores
   texture_set_name_regex: bpy.props.StringProperty(name='Texture Set Name Regex', default='(.+?)_')
-  auto_export_fbx: bpy.props.BoolProperty(name='Auto Export FBX', default=False)
   # env: bpy.props.StringProperty(name='Environment', default='')
 
   def draw(self, context):
@@ -276,7 +278,6 @@ class SubstanceToolsPreferences(bpy.types.AddonPreferences):
     layout.prop(self, 'painter_path')
     layout.prop(self, 'texture_output_folder_name')
     layout.prop(self, 'texture_set_name_regex')
-    layout.prop(self, 'auto_export_fbx')
     # layout.prop(self, 'env')
 
 # @Register
