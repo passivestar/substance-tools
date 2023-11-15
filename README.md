@@ -19,7 +19,6 @@ In 3D view press N. You'll find new buttons in the menu on the right on the "Sub
 - Put objects you want to texture into a collection and give them materials. Individual materials will become texture sets in Painter!
 - Click on the collection you want to texture in the outliner
 - Press the `Export [Collection Name] to Painter` button
-- In Painter press `Ctrl+S` to save the `.spp` file
 - When you're done, export textures from Painter (`Ctrl+Shift+E`), and press `Load Painter Textures` in Blender ✨
 
 Keep in mind that:
