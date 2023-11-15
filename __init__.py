@@ -1,10 +1,10 @@
-import bpy, re, subprocess, os
+import bpy, glob, re, subprocess, os
 from collections import defaultdict
 from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 1),
+  'version': (1, 3, 2),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -22,6 +22,42 @@ def get_paths():
   file = re.sub(r'[^a-zA-Z0-9_]', '_', file)
 
   return ( directory, file )
+
+def detect_substance_painter_path():
+  paths = []
+
+  current_os = os.name
+
+  if current_os == 'posix':
+    paths.extend([
+        f'/Applications/Adobe Substance 3D Painter.app/Contents/MacOS/Adobe Substance 3D Painter',  # macOS
+        f'~/Library/Application Support/Steam/steamapps/common/Substance 3D Painter/Adobe Substance 3D Painter.app/Contents/MacOS/Adobe Substance 3D Painter'  # macOS Steam
+    ])
+    for year in range(2020, 2026):
+      paths.extend([
+          f'/Applications/Adobe Substance 3D Painter {year}.app/Contents/MacOS/Adobe Substance 3D Painter',  # macOS
+          f'~/Library/Application Support/Steam/steamapps/common/Substance 3D Painter {year}/Adobe Substance 3D Painter.app/Contents/MacOS/Adobe Substance 3D Painter'  # macOS Steam
+      ])
+  elif current_os == 'nt':
+    for letter in 'CDEFGHIJKLMNOPQRSTUVWXYZ':
+      paths.extend([
+          f'{letter}:\\Program Files\\Adobe\\Adobe Substance 3D Painter\\Adobe Substance 3D Painter.exe',  # Windows
+          f'{letter}:\\Program Files (x86)\\Steam\\steamapps\\common\\Substance 3D Painter\\Adobe Substance 3D Painter.exe'  # Windows Steam
+      ])
+      for year in range(2020, 2026):
+        paths.extend([
+            f'{letter}:\\Program Files\\Adobe\\Adobe Substance 3D Painter {year}\\Adobe Substance 3D Painter.exe',  # Windows
+            f'{letter}:\\Program Files (x86)\\Steam\\steamapps\\common\\Substance 3D Painter {year}\\Adobe Substance 3D Painter.exe'  # Windows Steam
+        ])
+
+  # Check each path for the current operating system and return the first one that exists
+  for path in paths:
+    path = os.path.expanduser(path)
+    if Path(path).exists():
+      return path
+
+  # If none of the paths exist, return an empty string
+  return ''
 
 # @Operators
 
@@ -95,6 +131,13 @@ class OpenInSubstancePainterOperator(bpy.types.Operator):
       painter_path = re.sub(r'(?<!\\) ', r'\ ', preferences.painter_path)
     else:
       painter_path = preferences.painter_path
+
+    # Parse the environment variable
+    # env_override = preferences.env.split(';')
+    # env_override = [e.split('=') for e in env_override]
+    # env_override = {e[0]: e[1] if len(e) > 1 else '' for e in env_override}
+    # env = os.environ.copy()
+    # env.update(env_override)
 
     try:
       if os.name == 'nt':
@@ -221,11 +264,12 @@ class SubstanceToolsPanel(bpy.types.Panel):
 class SubstanceToolsPreferences(bpy.types.AddonPreferences):
   bl_idname = __name__
 
-  painter_path: bpy.props.StringProperty(name='Substance Painter Executable Path', default='', subtype='FILE_PATH')
+  painter_path: bpy.props.StringProperty(name='Substance Painter Executable Path', default=detect_substance_painter_path(), subtype='FILE_PATH')
   texture_output_folder_name: bpy.props.StringProperty(name='Textures Folder Name', default='textures')
   # Material names cant have underscores
   texture_set_name_regex: bpy.props.StringProperty(name='Texture Set Name Regex', default='(.+?)_')
   auto_export_fbx: bpy.props.BoolProperty(name='Auto Export FBX', default=False)
+  # env: bpy.props.StringProperty(name='Environment', default='')
 
   def draw(self, context):
     layout = self.layout
@@ -233,6 +277,7 @@ class SubstanceToolsPreferences(bpy.types.AddonPreferences):
     layout.prop(self, 'texture_output_folder_name')
     layout.prop(self, 'texture_set_name_regex')
     layout.prop(self, 'auto_export_fbx')
+    # layout.prop(self, 'env')
 
 # @Register
 
