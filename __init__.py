@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 7),
+  'version': (1, 3, 8),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -86,6 +86,20 @@ def get_preferences(context):
       'texture_set_name_regex': prefs.texture_set_name_regex
     }
 
+def object_has_material(obj):
+  return len(obj.data.materials) > 0 and obj.data.materials[0] is not None
+
+def create_material_for_object(obj):
+  material = bpy.data.materials.new(name=obj.name)
+  material.use_nodes = True
+  material.node_tree.nodes.clear()
+  principled_bsdf = material.node_tree.nodes.new('ShaderNodeBsdfPrincipled')
+  material.node_tree.links.new(principled_bsdf.outputs['BSDF'], material.node_tree.nodes['Material Output'].inputs['Surface'])
+  if len(obj.data.materials) > 0:
+    obj.data.materials[0] = material
+  else:
+    obj.data.materials.append(material)
+
 # @Operators
 
 class ExportToSubstancePainterOperator(bpy.types.Operator):
@@ -114,10 +128,9 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
         self.report({'ERROR'}, f'Object {o.name} is not a mesh')
         return {'FINISHED'}
 
-      # Check if the object has a material:
-      if len(o.data.materials) == 0 or o.data.materials[0] is None:
-        self.report({'ERROR'}, f'Object {o.name} has no material assigned')
-        return {'FINISHED'}
+      # Check if the object has a material and create if necessary:
+      if not object_has_material(o):
+        create_material_for_object(o)
 
     if not textures.exists():
       textures.mkdir(parents=True, exist_ok=True)
@@ -248,6 +261,9 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
           # Set node editor to current material
           material = bpy.data.materials[texture_set_name]
           context.object.data.materials[0] = material
+          if material.node_tree is None:
+            self.report({'INFO'}, f'Material {material.name} has no node tree, skipping')
+            continue
           context.space_data.node_tree = material.node_tree
           # Don't add textures if there're more than 2 nodes in the tree (if textures were already added)
           if len(context.space_data.node_tree.nodes) > 2:
