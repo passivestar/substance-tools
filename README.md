@@ -16,12 +16,12 @@ In 3D view press N. You'll find new buttons in the menu on the right on the "Sub
 
 # Usage
 
-- Put objects you want to texture into a collection and give them materials. Individual materials will become texture sets in Painter!
+- Put objects you want to texture into a collection and give them materials. Individual materials will become texture sets in Painter! If an object doesn't have a material it will be created automatically
 - Click on the collection you want to texture in the outliner
 - Press the `Export [Collection Name] to Painter` button
 - When you're done, export textures from Painter (`Ctrl+Shift+E`), and press `Load Painter Textures` in Blender ✨
 
-Keep in mind that:
+Tip:
 - In Blender you can link objects to a collection instead of moving them if you hold `Ctrl` when you drag them in the outliner. This way you can create collections specifically for Substance Painter export and group assets however you like!
 
 # Preferences
@@ -30,7 +30,6 @@ In the addon preferences you can configure:
 
 - Substance Painter Path (in case it wasn't automatically detected)
 - Texture output folder name. Default is `textures`
-- Texture Set Name Regex - Regular expression used to determine the texture set name by the texture file name. Usually the texture set name goes first and is separated from other info by the first "_". Default value is `(.+?)_`
 
 # Supported Substance Versions
 
