@@ -33,6 +33,12 @@ In the addon preferences you can configure:
 - Texture output folder name. Default is `textures`
 - Texture Set Name Regex - Regular expression used to determine the texture set name by the texture file name. Usually the texture set name goes first and is separated from other info by the first "_". Default value is `(.+?)_`
 
-# Known Issues
+# Supported Substance Versions
 
-- The Steam version of Painter on Window is currently unsupported. Adobe version seems to be working fine. On Mac Steam version is working well too
+The addon is working with any recent version of:
+
+- Windows CC Substance Painter
+- MacOS CC Substance Painter
+- MacOS Steam Substance Painter
+
+Windows Steam version is currently unsupported

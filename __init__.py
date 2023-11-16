@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 10),
+  'version': (1, 3, 11),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -22,11 +22,13 @@ def detect_substance_painter_path():
   if current_os == 'posix':
     paths.extend([
         f'/Applications/Adobe Substance 3D Painter.app/Contents/MacOS/Adobe Substance 3D Painter',  # macOS
+        f'/Applications/Adobe Substance 3D Painter/Adobe Substance 3D Painter.app/Contents/MacOS/Adobe Substance 3D Painter',  # macOS
         f'~/Library/Application Support/Steam/steamapps/common/Substance 3D Painter/Adobe Substance 3D Painter.app/Contents/MacOS/Adobe Substance 3D Painter'  # macOS Steam
     ])
     for year in range(2020, 2026):
       paths.extend([
           f'/Applications/Adobe Substance 3D Painter {year}.app/Contents/MacOS/Adobe Substance 3D Painter',  # macOS
+          f'/Applications/Adobe Substance 3D Painter/Adobe Substance 3D Painter {year}.app/Contents/MacOS/Adobe Substance 3D Painter',  # macOS
           f'~/Library/Application Support/Steam/steamapps/common/Substance 3D Painter {year}/Adobe Substance 3D Painter.app/Contents/MacOS/Adobe Substance 3D Painter'  # macOS Steam
       ])
   elif current_os == 'nt':
@@ -168,18 +170,15 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
       self.report({'ERROR'}, 'Substance Painter path is not valid. Please set the corrent path to Substance Painter in addon preferences')
       return {'FINISHED'}
 
-    # Escape the painter path on posix
-    if os.name == 'posix':
-      painter_path = re.sub(r'(?<!\\) ', r'\ ', painter_path)
-      # Check if a mac .app and add the executable part automatically
-      if painter_path.endswith('.app'):
-        painter_path = painter_path + '/Contents/MacOS/Adobe Substance 3D Painter'
+    # Check if a mac .app and add the executable part automatically first
+    if os.name == 'posix' and painter_path.endswith('.app'):
+      painter_path = painter_path + '/Contents/MacOS/Adobe Substance 3D Painter'
 
     try:
       if os.name == 'nt':
         subprocess.Popen([painter_path, '--mesh', fbx, '--export-path', textures, spp])
       else:
-        subprocess.Popen(f'{painter_path} --mesh {fbx} --export-path {textures} {spp}', shell=True)
+        subprocess.Popen(f'"{painter_path}" --mesh "{fbx}" --export-path "{textures}" "{spp}"', shell=True)
 
     except Exception as e:
       self.report({'ERROR'}, f'Error opening Substance Painter: {e}')
