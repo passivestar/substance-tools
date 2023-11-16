@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 11),
+  'version': (1, 3, 12),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -230,18 +230,6 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
       self.report({'ERROR'}, 'There are no materials in the scene')
       return {'FINISHED'}
 
-    # Set any mesh object as an active one so that we could use it while we're loading textures
-    # for different materials (because you need to use Shader Editor and can't assign directly)
-    for obj in bpy.data.objects:
-      if obj.type == 'MESH' and len(obj.data.materials) > 0:
-        context.view_layer.objects.active = obj
-        break
-    # Return if there are no meshes in the scene
-    if context.active_object is None or context.active_object.type != 'MESH':
-      self.report({'ERROR'}, 'There are no meshes in the scene')
-      context.area.type = previous_context
-      return {'FINISHED'}
-
     # Iterate through all of the files and group them by texture set name (material)
     texture_sets = defaultdict(list)
     material_names = sorted([material.name for material in bpy.data.materials if material_needs_setup(material)], key=len, reverse=True)
@@ -250,14 +238,18 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
         if material_name in texture_file.name:
           texture_sets[material_name].append(texture_file.name)
           break
+    # Create an empty mesh object with an empty material slot and set it as active
+    # This is needed to be able to use the shader editor to assign textures with node wrangler
+    temp_mesh = bpy.data.meshes.new(name="TempMesh")
+    temp_obj = bpy.data.objects.new(name="TempObject", object_data=temp_mesh)
+    temp_obj.data.materials.append(None)
+    context.scene.collection.objects.link(temp_obj)
+    context.view_layer.objects.active = temp_obj
 
     # Set area type to node editor
     previous_context = context.area.type
     context.area.type = 'NODE_EDITOR'
     context.area.ui_type = 'ShaderNodeTree'
-
-    # Material to switch back to when we're done adding textures
-    prev_material = context.object.data.materials[0]
 
     # Try catch to make sure that the context is ALWAYS returned to the previous one
     # Otherwise the UI may break
@@ -282,8 +274,8 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
       tb = traceback.format_exc()
       self.report({'ERROR'}, f'Error occurred while adding textures: {e}\n{tb}')
     finally:
-      context.object.data.materials[0] = prev_material
       context.area.type = previous_context
+      bpy.data.objects.remove(temp_obj)
 
     return {'FINISHED'}
 
