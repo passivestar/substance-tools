@@ -22,7 +22,6 @@ In 3D view press N. You'll find new buttons in the menu on the right on the "Sub
 - When you're done, export textures from Painter (`Ctrl+Shift+E`), and press `Load Painter Textures` in Blender ✨
 
 Keep in mind that:
-- If you use a custom output template, make sure the exported textures' filenames start with the texture set name, like this: `$textureSet_diff(_$colorSpace)(.$udim)`
 - In Blender you can link objects to a collection instead of moving them if you hold `Ctrl` when you drag them in the outliner. This way you can create collections specifically for Substance Painter export and group assets however you like!
 
 # Preferences
