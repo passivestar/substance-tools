@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 14),
+  'version': (1, 3, 15),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -177,6 +177,11 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
     # Check if a mac .app and add the executable part automatically first
     if os.name == 'posix' and painter_path.endswith('.app'):
       painter_path = painter_path + '/Contents/MacOS/Adobe Substance 3D Painter'
+    
+    # Display an error message if the path is a directory
+    if os.path.isdir(painter_path):
+      self.report({'ERROR'}, 'Substance Painter path is set to a directory. Please set it to the executable file')
+      return {'FINISHED'}
 
     try:
       if os.name == 'nt':
@@ -331,7 +336,7 @@ class SubstanceToolsPanel(bpy.types.Panel):
 class SubstanceToolsPreferences(bpy.types.AddonPreferences):
   bl_idname = __name__
 
-  painter_path: bpy.props.StringProperty(name='Substance Painter Executable Path', default=detect_substance_painter_path(), subtype='FILE_PATH')
+  painter_path: bpy.props.StringProperty(name='Substance Painter Executable', default=detect_substance_painter_path(), subtype='FILE_PATH')
   texture_output_folder_name: bpy.props.StringProperty(name='Textures Folder Name', default='textures')
 
   def draw(self, context):
