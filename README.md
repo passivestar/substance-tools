@@ -4,6 +4,7 @@
 
 https://github.com/passivestar/substance-tools/assets/60579014/b47d8e04-7535-4510-aed2-9c4569880b02
 
+Join our [discord](https://discord.gg/pPHQ5HQ) for discussion!
 
 ## Installation
 
@@ -33,10 +34,11 @@ In the addon preferences you can configure:
 
 # Supported Substance Versions
 
-The addon is working with any recent version of:
+The addon is working with:
 
 - Windows CC Substance Painter
+- Windows Steam Substance Painter (Tested on Substance Painter 2023)
 - MacOS CC Substance Painter
 - MacOS Steam Substance Painter
 
-Windows Steam version is currently unsupported
+Let me know if you have any issues!
