@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 18),
+  'version': (1, 3, 19),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -360,13 +360,11 @@ class SubstanceToolsPreferences(bpy.types.AddonPreferences):
   bl_idname = __name__
 
   painter_path: bpy.props.StringProperty(name='Substance Painter Executable', default=detect_substance_painter_path(), subtype='FILE_PATH')
-  textures_path: bpy.props.StringProperty(name='Textures Path', default='textures', subtype='DIR_PATH')
+  textures_path: bpy.props.StringProperty(name='Export Path (Blank for blend file path)', default='', subtype='DIR_PATH')
 
   def draw(self, context):
     layout = self.layout
-    layout.label(text='Substance Painter Executable')
     layout.prop(self, 'painter_path')
-    layout.label(text='Textures Root Path. Leave blank for the same directory as the blend file')
     layout.prop(self, 'textures_path')
 
 # @Register
