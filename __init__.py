@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 19),
+  'version': (1, 3, 20),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -95,13 +95,11 @@ def get_paths(context):
   
   collection_name_clean = re.sub(r'[^a-zA-Z0-9_]', '_', bpy.context.view_layer.active_layer_collection.name)
 
-  file_name = 'textures_' + collection_name_clean
-
   textures_path_for_collection_no_collection = textures_path.joinpath('textures')
-  textures_path_for_collection = textures_path.joinpath(file_name + '/')
+  textures_path_for_collection = textures_path.joinpath('textures_' + collection_name_clean + '/')
 
-  fbx_path = textures_path_for_collection.joinpath(file_name + '.fbx')
-  spp_path = textures_path_for_collection.joinpath(file_name + '.spp')
+  fbx_path = textures_path_for_collection.joinpath(collection_name_clean + '.fbx')
+  spp_path = textures_path_for_collection.joinpath(collection_name_clean + '.spp')
 
   return {
     'fbx': fbx_path,
@@ -167,6 +165,9 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
       # Check if the object has a material and create if necessary:
       if not object_has_material(o):
         create_material_for_object(o)
+    
+    if not directory.exists():
+      directory.mkdir(parents=True, exist_ok=True)
 
     # Export FBX
     bpy.ops.wm.save_mainfile()
@@ -175,11 +176,10 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
       use_mesh_modifiers=True,
       add_leaf_bones=False,
       apply_scale_options='FBX_SCALE_ALL',
-      use_batch_own_dir=True,
       bake_anim_use_nla_strips=False,
       bake_space_transform=True,
-      batch_mode="COLLECTION",
-      filepath=str(directory_no_collection)
+      use_active_collection=True,
+      filepath=str(fbx)
     )
 
     # If we only need to export the fbx, we're done
