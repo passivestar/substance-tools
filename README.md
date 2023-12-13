@@ -19,7 +19,7 @@ In 3D view press N. You'll find new buttons in the menu on the right on the "Sub
 
 - Put objects you want to texture into a collection and give them materials. Individual materials will become texture sets in Painter! If an object doesn't have a material it will be created automatically
 - Click on the collection you want to texture in the outliner
-- Press the `Export [Collection Name] to Painter` button
+- Press the `Export and Open in Painter` button
 - When you're done, export textures from Painter (`Ctrl+Shift+E`), and press `Load Painter Textures` in Blender ✨
 
 Tip:
@@ -30,7 +30,7 @@ Tip:
 In the addon preferences you can configure:
 
 - Substance Painter Path (in case it wasn't automatically detected)
-- Texture output folder name. Default is `textures`
+- Textures Path. Path to the directory where all of the subdirectories for collections will be created. Leave blank to create them in the same directory as the blend file
 
 # Supported Substance Versions
 

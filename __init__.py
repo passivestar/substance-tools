@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 17),
+  'version': (1, 3, 18),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -84,24 +84,30 @@ def material_needs_setup(material):
 # Mock data for testing through blender text editor without installing
 mocks = {
   'painter_path': detect_substance_painter_path(),
-  'texture_output_folder_name': 'textures'
+  'textures_path': ''
 }
 
 def get_paths(context):
-  directory = bpy.path.abspath('//')
+  textures_path = get_preferences(context)["textures_path"]
 
+  if textures_path == '':
+    textures_path = Path(bpy.path.abspath('//'))
+  
   collection_name_clean = re.sub(r'[^a-zA-Z0-9_]', '_', bpy.context.view_layer.active_layer_collection.name)
 
-  fbx_path = directory + collection_name_clean + '.fbx'
-  spp_path = directory + collection_name_clean + '.spp'
+  file_name = 'textures_' + collection_name_clean
 
-  textures = Path(directory).joinpath(get_preferences(context)["texture_output_folder_name"])
+  textures_path_for_collection_no_collection = textures_path.joinpath('textures')
+  textures_path_for_collection = textures_path.joinpath(file_name + '/')
+
+  fbx_path = textures_path_for_collection.joinpath(file_name + '.fbx')
+  spp_path = textures_path_for_collection.joinpath(file_name + '.spp')
 
   return {
-    'directory': directory,
     'fbx': fbx_path,
     'spp': spp_path,
-    'textures': textures,
+    'directory_no_collection': textures_path_for_collection_no_collection,
+    'directory': textures_path_for_collection,
     'collection_name_clean': collection_name_clean
   }
 
@@ -112,7 +118,7 @@ def get_preferences(context):
     prefs = context.preferences.addons[__name__].preferences
     return {
       'painter_path': prefs.painter_path,
-      'texture_output_folder_name': prefs.texture_output_folder_name
+      'textures_path': prefs.textures_path
     }
 
 def object_has_material(obj):
@@ -133,8 +139,8 @@ def create_material_for_object(obj):
 # @Operators
 
 class ExportToSubstancePainterOperator(bpy.types.Operator):
-  """Export Collection to Substance Painter"""
-  bl_idname, bl_label = 'st.open_in_substance_painter', 'Open Collection in Substance Painter'
+  """Export Collection to Substance Painter. Press Ctrl+Shift+R in Painter to reload after re-export"""
+  bl_idname, bl_label = 'st.open_in_substance_painter', 'Export Collection to Substance Painter'
 
   run_painter: bpy.props.BoolProperty(name='Run Substance Painter', default=True)
 
@@ -143,10 +149,10 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
     painter_path = preferences["painter_path"]
 
     paths = get_paths(context)
+    directory_no_collection = paths['directory_no_collection']
     directory = paths['directory']
     fbx = paths['fbx']
     spp = paths['spp']
-    textures = paths['textures']
 
     if bpy.data.filepath == '':
       self.report({'ERROR'}, 'File is not saved. Please save your blend file')
@@ -162,9 +168,6 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
       if not object_has_material(o):
         create_material_for_object(o)
 
-    if not textures.exists():
-      textures.mkdir(parents=True, exist_ok=True)
-
     # Export FBX
     bpy.ops.wm.save_mainfile()
     bpy.ops.export_scene.fbx(
@@ -172,11 +175,11 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
       use_mesh_modifiers=True,
       add_leaf_bones=False,
       apply_scale_options='FBX_SCALE_ALL',
-      use_batch_own_dir=False,
+      use_batch_own_dir=True,
       bake_anim_use_nla_strips=False,
       bake_space_transform=True,
       batch_mode="COLLECTION",
-      filepath=directory
+      filepath=str(directory_no_collection)
     )
 
     # If we only need to export the fbx, we're done
@@ -203,9 +206,9 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
 
     try:
       if os.name == 'nt':
-        subprocess.Popen([painter_path, '--mesh', fbx, '--export-path', textures, spp])
+        subprocess.Popen([painter_path, '--mesh', fbx, '--export-path', directory, spp])
       else:
-        subprocess.Popen(f'"{painter_path}" --mesh "{fbx}" --export-path "{textures}" "{spp}"', shell=True)
+        subprocess.Popen(f'"{painter_path}" --mesh "{fbx}" --export-path "{directory}" "{spp}"', shell=True)
 
     except Exception as e:
       self.report({'ERROR'}, f'Error opening Substance Painter: {e}')
@@ -221,7 +224,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
     preferences = get_preferences(context)
 
     paths = get_paths(context)
-    textures = paths['textures']
+    directory = paths['directory']
 
     # Check that node wrangler is enabled
     if 'node_wrangler' not in bpy.context.preferences.addons:
@@ -249,7 +252,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
       return {'FINISHED'}
 
     # Return if the texture folder doesn't exist
-    if not textures.exists():
+    if not directory.exists():
       self.report({'ERROR'}, 'There is no texture folder')
       return {'FINISHED'}
 
@@ -261,7 +264,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
     # Iterate through all of the files and group them by texture set name (material)
     texture_sets = defaultdict(list)
     material_names = sorted([material.name for material in bpy.data.materials if material_needs_setup(material)], key=len, reverse=True)
-    for texture_file in textures.iterdir():
+    for texture_file in directory.iterdir():
       # If texture_file is not a common texture file extension, skip it
       if texture_file.suffix not in ['.png', '.jpg', '.jpeg', '.tga', '.tif', '.tiff', '.bmp', '.exr']:
         continue
@@ -298,7 +301,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
               context.space_data.node_tree.nodes.active = node
               break
           # Add textures to node tree using node wrangler
-          directory = str(textures) + os.sep
+          directory = str(directory) + os.sep
           files = [{'name':n} for n in texture_file_names]
           bpy.ops.node.nw_add_textures_for_principled(directory=directory, files=files)
     except Exception as e:
@@ -340,18 +343,16 @@ class SubstanceToolsPanel(bpy.types.Panel):
         column = box_column.column(align=True)
         column.operator('st.open_in_substance_painter', text=f'Export', icon='EXPORT').run_painter = False
         column.operator('st.open_in_substance_painter', text=f'Export and Open in Painter', icon='WINDOW').run_painter = True
-        layout.row().label(text='Press Ctrl+Shift+R in Painter to reload after re-export')
+
+        # Load textures button
+        if 'node_wrangler' in bpy.context.preferences.addons:
+          column.operator('st.load_substance_painter_textures', text='Load Painter Textures', icon='IMPORT')
+        else:
+          column.label(text='Node Wrangler addon needs to be enabled!')
+          column.label(text='Please enable it in Edit -> Preferences -> Add-ons')
+
       else:
         box_column.operator('st.open_in_substance_painter', text=f'Export and Open in Painter', icon='WINDOW').run_painter = True
-
-    row = layout.row()
-    if 'node_wrangler' in bpy.context.preferences.addons:
-      row.operator('st.load_substance_painter_textures', text='Load Painter Textures', icon='IMPORT')
-    else:
-      box = layout.box()
-      column = box.column(align=True)
-      column.label(text='Node Wrangler addon needs to be enabled!')
-      column.label(text='Please enable it in Edit -> Preferences -> Add-ons')
 
 # @Preferences
 
@@ -359,12 +360,14 @@ class SubstanceToolsPreferences(bpy.types.AddonPreferences):
   bl_idname = __name__
 
   painter_path: bpy.props.StringProperty(name='Substance Painter Executable', default=detect_substance_painter_path(), subtype='FILE_PATH')
-  texture_output_folder_name: bpy.props.StringProperty(name='Textures Folder Name', default='textures')
+  textures_path: bpy.props.StringProperty(name='Textures Path', default='textures', subtype='DIR_PATH')
 
   def draw(self, context):
     layout = self.layout
+    layout.label(text='Substance Painter Executable')
     layout.prop(self, 'painter_path')
-    layout.prop(self, 'texture_output_folder_name')
+    layout.label(text='Textures Root Path. Leave blank for the same directory as the blend file')
+    layout.prop(self, 'textures_path')
 
 # @Register
 
