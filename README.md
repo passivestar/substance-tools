@@ -37,8 +37,6 @@ In the addon preferences you can configure:
 The addon is working with:
 
 - Windows CC Substance Painter
-- Windows Steam Substance Painter (Tested on Substance Painter 2023)
+- Windows Steam Substance Painter
 - MacOS CC Substance Painter
 - MacOS Steam Substance Painter
-
-Let me know if you have any issues!
