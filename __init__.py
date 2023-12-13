@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 20),
+  'version': (1, 3, 21),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -92,10 +92,11 @@ def get_paths(context):
 
   if textures_path == '':
     textures_path = Path(bpy.path.abspath('//'))
+  else:
+    textures_path = Path(textures_path)
   
   collection_name_clean = re.sub(r'[^a-zA-Z0-9_]', '_', bpy.context.view_layer.active_layer_collection.name)
 
-  textures_path_for_collection_no_collection = textures_path.joinpath('textures')
   textures_path_for_collection = textures_path.joinpath('textures_' + collection_name_clean + '/')
 
   fbx_path = textures_path_for_collection.joinpath(collection_name_clean + '.fbx')
@@ -104,7 +105,6 @@ def get_paths(context):
   return {
     'fbx': fbx_path,
     'spp': spp_path,
-    'directory_no_collection': textures_path_for_collection_no_collection,
     'directory': textures_path_for_collection,
     'collection_name_clean': collection_name_clean
   }
@@ -147,7 +147,6 @@ class ExportToSubstancePainterOperator(bpy.types.Operator):
     painter_path = preferences["painter_path"]
 
     paths = get_paths(context)
-    directory_no_collection = paths['directory_no_collection']
     directory = paths['directory']
     fbx = paths['fbx']
     spp = paths['spp']
