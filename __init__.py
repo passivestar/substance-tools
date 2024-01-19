@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 21),
+  'version': (1, 3, 22),
   'author': 'passivestar',
   'blender': (4, 0, 0),
   'location': '3D View N Panel',
@@ -238,7 +238,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
     for obj in bpy.context.view_layer.active_layer_collection.collection.objects:
       if obj.type == 'MESH' and len(obj.data.materials) > 0:
         for material in obj.data.materials:
-          if material is not None and "node_tree" in material:
+          if material is not None and material.use_nodes:
             for node in material.node_tree.nodes:
               if node.bl_idname == 'ShaderNodeTexImage':
                 unique_images.add(node.image)
@@ -273,6 +273,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
           break
     # Create an empty mesh object with an empty material slot and set it as active
     # This is needed to be able to use the shader editor to assign textures with node wrangler
+    previous_active_object = context.view_layer.objects.active
     temp_mesh = bpy.data.meshes.new(name="TempMesh")
     temp_obj = bpy.data.objects.new(name="TempObject", object_data=temp_mesh)
     temp_obj.data.materials.append(None)
@@ -308,6 +309,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
       self.report({'ERROR'}, f'Error occurred while adding textures: {e}\n{tb}')
     finally:
       context.area.type = previous_context
+      context.view_layer.objects.active = previous_active_object
       bpy.data.objects.remove(temp_obj)
 
     return {'FINISHED'}
