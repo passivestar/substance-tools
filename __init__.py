@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 23),
+  'version': (1, 3, 24),
   'author': 'passivestar',
   'blender': (4, 1, 0),
   'location': '3D View N Panel',
@@ -342,21 +342,18 @@ class SubstanceToolsPanel(bpy.types.Panel):
       box_column.label(text='Select a collection in the outliner')
     else:
       box_column.label(text=f'Collection: {collection_name_clean}')
-      if fbx_exists:
-        box_column.separator()
-        column = box_column.column(align=True)
-        column.operator('st.open_in_substance_painter', text=f'Export', icon='EXPORT').run_painter = False
-        column.operator('st.open_in_substance_painter', text=f'Export and Open in Painter', icon='WINDOW').run_painter = True
+      box_column.separator()
+      column = box_column.column(align=True)
+      column.operator('st.open_in_substance_painter', text=f'Export', icon='EXPORT').run_painter = False
+      column.operator('st.open_in_substance_painter', text=f'Export and Open in Painter', icon='WINDOW').run_painter = True
 
+      if fbx_exists:
         # Load textures button
         if 'node_wrangler' in bpy.context.preferences.addons:
           column.operator('st.load_substance_painter_textures', text='Load Painter Textures', icon='IMPORT')
         else:
           column.label(text='Node Wrangler addon needs to be enabled!')
           column.label(text='Please enable it in Edit -> Preferences -> Add-ons')
-
-      else:
-        box_column.operator('st.open_in_substance_painter', text=f'Export and Open in Painter', icon='WINDOW').run_painter = True
 
 # @Preferences
 
