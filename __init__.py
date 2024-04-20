@@ -4,9 +4,9 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 22),
+  'version': (1, 3, 23),
   'author': 'passivestar',
-  'blender': (4, 0, 0),
+  'blender': (4, 1, 0),
   'location': '3D View N Panel',
   'description': 'Simplifies Export to Substance Painter',
   'category': 'Import-Export'
@@ -68,8 +68,11 @@ def detect_substance_painter_path():
   # Check each path for the current operating system and return the first one that exists
   for path in paths:
     path = os.path.expanduser(path)
-    if Path(path).exists():
-      return path
+    try:
+      if Path(path).exists():
+        return path
+    except Exception as e:
+      pass
 
   # If none of the paths exist, return an empty string
   return ''
