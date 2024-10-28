@@ -4,7 +4,7 @@ from pathlib import Path
 
 bl_info = {
   'name': 'Substance Import-Export Tools',
-  'version': (1, 3, 24),
+  'version': (1, 3, 25),
   'author': 'passivestar',
   'blender': (4, 1, 0),
   'location': '3D View N Panel',
@@ -243,7 +243,7 @@ class LoadSubstancePainterTexturesOperator(bpy.types.Operator):
         for material in obj.data.materials:
           if material is not None and material.use_nodes:
             for node in material.node_tree.nodes:
-              if node.bl_idname == 'ShaderNodeTexImage':
+              if node.bl_idname == 'ShaderNodeTexImage' and node.image:
                 unique_images.add(node.image)
     for image in unique_images:
       image.reload()
